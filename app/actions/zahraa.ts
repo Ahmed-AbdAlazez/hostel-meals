@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getCurrentUser, destroySession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { encrypt, decrypt } from "@/lib/crypto";
-import { loginToZahraa, bookMealsSafely, ZahraaError } from "@/lib/zahraa";
+import { loginToZahraa, fetchMeals, bookMealsSafely, ZahraaError } from "@/lib/zahraa";
 import { getTomorrowCairoDate, isPastCairoBookingDeadline } from "@/lib/time";
 import { revalidatePath } from "next/cache";
 
@@ -39,13 +39,16 @@ export async function linkZahraaAccount(formData: {
 
   // 1. Actually test logging in to Al-Zahraa
   try {
-    await loginToZahraa(nationalId, password);
+    const jar = await loginToZahraa(nationalId, password);
+    await fetchMeals(jar);
   } catch (err: unknown) {
     const error = err as ZahraaError;
     return {
       success: false,
       message:
-        error.arabicMessage ||
+        (error.code === "SESSION_EXPIRED"
+          ? "لم يؤكد موقع الزهراء تسجيل الدخول. تحقق من الرقم القومي وكلمة المرور، ثم أعد المحاولة."
+          : error.arabicMessage) ||
         "البيانات غلط أو تعذر الاتصال بموقع الزهراء، لم يتم حفظ أي بيانات",
     };
   }

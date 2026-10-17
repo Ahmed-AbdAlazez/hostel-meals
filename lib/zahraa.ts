@@ -156,6 +156,24 @@ export async function loginToZahraa(
   password: string
 ): Promise<CookieJar> {
   const jar = new CookieJar();
+
+  // The portal creates its login session on the login page before accepting credentials.
+  const loginPage = await fetchWithTimeout(`${BASE_URL}/studentLogin`, {
+    method: "GET",
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+    },
+  });
+  jar.updateFromHeaders(loginPage.headers);
+
+  if (!loginPage.ok || !jar.has("connect.sid")) {
+    throw new ZahraaError(
+      "SITE_DOWN",
+      `Login page did not establish a session (HTTP ${loginPage.status})`,
+      "تعذر بدء جلسة تسجيل الدخول في موقع الزهراء. يرجى المحاولة لاحقاً"
+    );
+  }
+
   const body = new URLSearchParams({
     txtStudentID: nationalId,
     txtStudentPassword: password,
@@ -165,6 +183,7 @@ export async function loginToZahraa(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
+      Cookie: jar.toHeaderString(),
     },
     body,
     redirect: "manual",
@@ -172,12 +191,12 @@ export async function loginToZahraa(
 
   jar.updateFromHeaders(response.headers);
 
-  // Check if session cookie was established
+  // Ensure the portal kept the session initialized by the login page.
   if (!jar.has("connect.sid")) {
     throw new ZahraaError(
-      "INVALID_CREDENTIALS",
-      "Login failed: connect.sid session cookie not returned",
-      "بيانات الدخول للزهراء غير صحيحة، تأكد من الرقم القومي وكلمة المرور"
+      "SITE_DOWN",
+      `Login response discarded the session (HTTP ${response.status})`,
+      "لم يستكمل موقع الزهراء جلسة تسجيل الدخول. يرجى المحاولة لاحقاً"
     );
   }
 
