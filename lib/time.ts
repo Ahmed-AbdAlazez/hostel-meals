@@ -60,13 +60,13 @@ export function getCairoNow(date: Date = new Date()): CairoDateParts {
 }
 
 /**
- * Gets tomorrow's date string in Cairo (YYYY-MM-DD).
- * Adds 24 hours to the current Cairo time and returns its YYYY-MM-DD.
+ * Gets the next calendar date in Cairo (YYYY-MM-DD).
  */
 export function getTomorrowCairoDate(date: Date = new Date()): string {
-  // Adding 25 hours safely lands in tomorrow in Cairo regardless of 1hr DST shift
-  const tomorrow = new Date(date.getTime() + 25 * 60 * 60 * 1000);
-  return getCairoNow(tomorrow).dateStr;
+  const { year, month, day } = getCairoNow(date);
+  return new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, 10);
 }
 
 /**

@@ -40,66 +40,57 @@ self.addEventListener("notificationclick", (event) => {
 
   notification.close();
 
-  // Action button: "غداء + عشاء"
-  if (action === "book_both") {
-    if (!data.token) return;
+  const choices = {
+    book_both: "both",
+    book_lunch: "lunch",
+    book_dinner: "dinner",
+    skip: "skip",
+  };
+  const choice = choices[action];
+
+  if (choice) {
+    if (!data.token) {
+      event.waitUntil(
+        self.registration.showNotification("تعذر تنفيذ الاختيار", {
+          body: "رابط الحجز غير موجود. افتح التطبيق لاختيار الوجبات.",
+          icon: "/icons/icon-192.png",
+          dir: "rtl",
+          lang: "ar",
+        })
+      );
+      return;
+    }
 
     event.waitUntil(
-      fetch("/api/book/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: data.token,
-          choice: "both",
-        }),
-      })
-        .then((res) => res.json())
-        .then((resData) => {
-          const success = resData.success;
-          return self.registration.showNotification(
-            success ? "تأكيد الحجز ✓" : "فشل الحجز ❌",
+      (async () => {
+        try {
+          const response = await fetch("/api/book/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: data.token, choice }),
+          });
+          const result = await response.json();
+          const succeeded = response.ok && result.success === true;
+
+          await self.registration.showNotification(
+            succeeded ? "تم تنفيذ اختيارك ✓" : "تعذر تنفيذ الاختيار ❌",
             {
-              body: resData.message || (success ? "تم حجز غداء + عشاء بنجاح" : "حدث خطأ أثناء الحجز"),
+              body: result.message || "افتح التطبيق للتحقق من حالة حجزك.",
               icon: "/icons/icon-192.png",
               badge: "/icons/badge-72.png",
               dir: "rtl",
               lang: "ar",
             }
           );
-        })
-        .catch(() => {
-          return self.registration.showNotification("فشل الاتصال ❌", {
-            body: "تعذر الاتصال بالخادم لإتمام الحجز، افتح التطبيق للمحاولة.",
-            icon: "/icons/icon-192.png",
-            dir: "rtl",
-          });
-        })
-    );
-    return;
-  }
-
-  // Action button: "لا" (skip)
-  if (action === "skip") {
-    if (!data.token) return;
-
-    event.waitUntil(
-      fetch("/api/book/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: data.token,
-          choice: "skip",
-        }),
-      })
-        .then((res) => res.json())
-        .then(() => {
-          return self.registration.showNotification("تم التخطي", {
-            body: "تم اختيار عدم الحجز لوجبات الغد.",
+        } catch {
+          await self.registration.showNotification("فشل الاتصال ❌", {
+            body: "تعذر الاتصال بالخادم لإتمام الاختيار، افتح التطبيق للتحقق أو المحاولة.",
             icon: "/icons/icon-192.png",
             dir: "rtl",
             lang: "ar",
           });
-        })
+        }
+      })()
     );
     return;
   }

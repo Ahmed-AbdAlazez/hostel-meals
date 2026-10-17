@@ -97,10 +97,10 @@ export async function GET(req: NextRequest) {
 
         await sendPushToUser(reqRow.user_id as string, {
           title: "تذكير: باقي أقل من ساعة ونصف على قفل الحجز ⏳",
-          body: `حجز وجبات ${tomorrowArabic} بيقفل الساعة 8:00 مساءً — اختار الآن`,
+          body: `حجز وجبات ${tomorrowArabic} بيقفل الساعة 8:00 مساءً. اختر غداء أو عشاء، أو افتح الإشعار لاختيار الاثنين أو التخطي.`,
           actions: [
-            { action: "book_both", title: "غداء + عشاء" },
-            { action: "skip", title: "لا" },
+            { action: "book_lunch", title: "غداء فقط" },
+            { action: "book_dinner", title: "عشاء فقط" },
           ],
           data: {
             token,
@@ -252,10 +252,10 @@ export async function GET(req: NextRequest) {
 
         await sendPushToUser(student.id as string, {
           title: "حجز وجبات بكرة 🍽",
-          body: `${tomorrowArabic} — اختار قبل الساعة 8 مساءً`,
+          body: `${tomorrowArabic} — اختر غداء أو عشاء، أو افتح الإشعار لاختيار الاثنين أو التخطي قبل الساعة 8 مساءً.`,
           actions: [
-            { action: "book_both", title: "غداء + عشاء" },
-            { action: "skip", title: "لا" },
+            { action: "book_lunch", title: "غداء فقط" },
+            { action: "book_dinner", title: "عشاء فقط" },
           ],
           data: {
             token,
