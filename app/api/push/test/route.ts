@@ -22,6 +22,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (sent === 0) {
+      if (failed > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "تم العثور على اشتراك للجهاز، لكن فشل إرسال الإشعار. تحقق من إعداد مفاتيح VAPID واتصال خدمة الإشعارات.",
+          },
+          { status: 502 }
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,

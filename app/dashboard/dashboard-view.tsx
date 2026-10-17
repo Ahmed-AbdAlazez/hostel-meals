@@ -147,69 +147,81 @@ export function DashboardView({
     }
   };
 
-  // Web Push Subscription handler
-  const handleEnablePush = async () => {
+  const ensurePushSubscription = async () => {
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-      toast.error("المتصفح الحالي لا يدعم إشعارات Web Push");
-      return;
+      throw new Error("المتصفح الحالي لا يدعم إشعارات Web Push");
     }
 
-    try {
-      const permission = await Notification.requestPermission();
-      setPushStatus(permission as "default" | "granted" | "denied");
+    if (!window.isSecureContext) {
+      throw new Error("يجب فتح التطبيق عبر HTTPS أو localhost لتفعيل الإشعارات");
+    }
 
-      if (permission !== "granted") {
-        toast.error("تم رفض إذن الإشعارات من المتصفح");
-        return;
-      }
+    const permission =
+      Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+    setPushStatus(permission as "default" | "granted" | "denied");
 
-      const registration = await navigator.serviceWorker.ready;
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (permission !== "granted") {
+      throw new Error(
+        permission === "denied"
+          ? "إذن الإشعارات محظور. اسمح به من إعدادات الموقع في المتصفح."
+          : "لم يتم منح إذن الإشعارات"
+      );
+    }
 
-      if (!vapidPublicKey) {
-        toast.error("مفتاح VAPID غير معرف في إعدادات التطبيق");
-        return;
-      }
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
-      // Helper to convert base64 to Uint8Array for pushManager
-      const urlBase64ToUint8Array = (base64String: string) => {
-        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-          outputArray[i] = rawData.charCodeAt(i);
-        }
-        return outputArray;
-      };
+    if (!vapidPublicKey) {
+      throw new Error("مفتاح VAPID العام غير معرف في إعدادات التطبيق");
+    }
 
-      const subscription = await registration.pushManager.subscribe({
+    const padding = "=".repeat((4 - (vapidPublicKey.length % 4)) % 4);
+    const base64 = (vapidPublicKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const applicationServerKey = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      applicationServerKey[i] = rawData.charCodeAt(i);
+    }
+
+    await navigator.serviceWorker.register("/sw.js");
+    const registration = await navigator.serviceWorker.ready;
+    const subscription =
+      (await registration.pushManager.getSubscription()) ??
+      (await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+        applicationServerKey,
+      }));
+    const jsonSub = subscription.toJSON();
 
-      const jsonSub = subscription.toJSON();
-      const res = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: jsonSub.keys?.p256dh,
-            auth: jsonSub.keys?.auth,
-          },
-        }),
-      });
+    const response = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: jsonSub.keys?.p256dh,
+          auth: jsonSub.keys?.auth,
+        },
+      }),
+    });
+    const result = await response.json();
 
-      const data = await res.json();
-      if (res.ok) {
-        toast.success("تم تفعيل الإشعارات بنجاح ✓");
-      } else {
-        toast.error(data.error || "فشل حفظ بيانات الاشتراك");
-      }
+    if (!response.ok) {
+      throw new Error(result.error || result.message || "فشل حفظ اشتراك الإشعارات");
+    }
+
+    return result;
+  };
+
+  // Web Push Subscription handler
+  const handleEnablePush = async () => {
+    try {
+      await ensurePushSubscription();
+      toast.success("تم تفعيل الإشعارات بنجاح ✓");
     } catch (err) {
       console.error(err);
-      toast.error("حدث خطأ أثناء تفعيل الإشعارات");
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء تفعيل الإشعارات");
     }
   };
 
@@ -217,6 +229,7 @@ export function DashboardView({
   const handleTestPush = async () => {
     setTestPushLoading(true);
     try {
+      await ensurePushSubscription();
       const res = await fetch("/api/push/test", { method: "POST" });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -224,8 +237,9 @@ export function DashboardView({
       } else {
         toast.error(data.message || data.error || "فشل إرسال الإشعار");
       }
-    } catch {
-      toast.error("خطأ أثناء الاتصال بالخادم");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "خطأ أثناء الاتصال بالخادم");
     } finally {
       setTestPushLoading(false);
     }
