@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="50%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#grad)" />
+  <g fill="#ffffff" transform="translate(96, 96) scale(0.625)">
+    <!-- Plate and cutlery icon -->
+    <circle cx="256" cy="256" r="160" fill="none" stroke="#ffffff" stroke-width="28" opacity="0.9" />
+    <circle cx="256" cy="256" r="110" fill="none" stroke="#ffffff" stroke-width="16" stroke-dasharray="16 12" opacity="0.6" />
+    <!-- Fork -->
+    <path d="M120 160 v100 a30 30 0 0 0 60 0 v-100 M150 260 v140 M135 160 v60 M165 160 v60" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round" />
+    <!-- Spoon/Knife -->
+    <path d="M350 160 c-25 0 -45 40 -45 90 c0 35 15 50 45 50 v140" fill="none" stroke="#ffffff" stroke-width="20" stroke-linecap="round" />
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+{
+  "name": "مساعد حجز وجبات الزهراء - جامعة القاهرة",
+  "short_name": "الزهراء",
+  "description": "حجز وجبات سكن الزهراء لطلاب جامعة القاهرة تلقائياً وبضغطة واحدة قبل الساعة 8 مساءً",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#ea580c",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
