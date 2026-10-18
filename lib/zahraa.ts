@@ -85,11 +85,9 @@ export class CookieJar {
   }
 
   private parseCookieHeader(header: string) {
-    const parts = header.split(";")[0].split("=");
-    if (parts.length >= 2) {
-      const name = parts[0].trim();
-      const value = parts.slice(1).join("=").trim();
-      this.cookies.set(name, value);
+    const cookiePattern = /(?:^|,\s*)([^=;,\s]+)=([^;]*)/g;
+    for (const match of header.matchAll(cookiePattern)) {
+      this.cookies.set(match[1].trim(), match[2].trim());
     }
   }
 
@@ -166,11 +164,11 @@ export async function loginToZahraa(
   });
   jar.updateFromHeaders(loginPage.headers);
 
-  if (!loginPage.ok || !jar.has("connect.sid")) {
+  if (!loginPage.ok) {
     throw new ZahraaError(
       "SITE_DOWN",
-      `Login page did not establish a session (HTTP ${loginPage.status})`,
-      "تعذر بدء جلسة تسجيل الدخول في موقع الزهراء. يرجى المحاولة لاحقاً"
+      `Login page returned HTTP ${loginPage.status}`,
+      `رفض موقع الزهراء بدء اتصال الخادم (HTTP ${loginPage.status}). هذا لا يعني أن بياناتك خاطئة؛ قد يحظر الموقع اتصال Vercel.`
     );
   }
 
@@ -184,6 +182,8 @@ export async function loginToZahraa(
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Cookie: jar.toHeaderString(),
+      Origin: BASE_URL,
+      Referer: `${BASE_URL}/studentLogin`,
     },
     body,
     redirect: "manual",
